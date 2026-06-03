@@ -885,6 +885,27 @@ const BOT_USERNAME = 'MyCineBDBot'; // update if different
 const APP_NAME     = 'MyCineBD';
 const MINI_APP_URL = 'https://t.me/MyCineBDBot/MyCineBD';
 const SITE_URL     = 'https://mycinebd.com';
+const SMARTLINK_URL = 'https://skirmishup.com/hv7gy7cw9u?key=5c2f2b463e9eee28768170b9e4337c44';
+
+// ── AD SYSTEM ──
+const adClickTracker = new Map();
+function getAdKey(type, id) {
+  return `${type}_${id}`;
+}
+function openSmartlink() {
+  window.open(SMARTLINK_URL, '_blank');
+}
+function handleAdClick(callback, adKey) {
+  if (adClickTracker.has(adKey)) {
+    // Second click - execute actual action
+    adClickTracker.delete(adKey);
+    callback();
+  } else {
+    // First click - show ads
+    adClickTracker.set(adKey, true);
+    openSmartlink();
+  }
+}
 
 const SOURCES = {
   movie:[
@@ -993,27 +1014,30 @@ const PILL_META = {
 };
 
 function selectPill(el, ep, mt){
-  document.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
-  el.classList.add('active');
-  const key = `${ep}_${mt}`;
-  gState = {ep, mt, lang:null, page:1, totalPages:1};
-  // special lang pills
-  if(ep==='discover_hi'){gState.ep='discover';gState.lang='hi';}
-  if(ep==='discover_ko'){gState.ep='discover';gState.lang='ko';}
-  if(ep==='discover_bn'){gState.ep='discover';gState.lang='bn';}
-  if(ep==='discover_tr'){gState.ep='discover';gState.lang='tr';}
-  // 'anime' and 'hindi_dub' handled directly inside fetchItems
+  const adKey = getAdKey('pill', `${ep}_${mt}`);
+  handleAdClick(() => {
+    document.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+    el.classList.add('active');
+    const key = `${ep}_${mt}`;
+    gState = {ep, mt, lang:null, page:1, totalPages:1};
+    // special lang pills
+    if(ep==='discover_hi'){gState.ep='discover';gState.lang='hi';}
+    if(ep==='discover_ko'){gState.ep='discover';gState.lang='ko';}
+    if(ep==='discover_bn'){gState.ep='discover';gState.lang='bn';}
+    if(ep==='discover_tr'){gState.ep='discover';gState.lang='tr';}
+    // 'anime' and 'hindi_dub' handled directly inside fetchItems
 
-  const meta = PILL_META[key] || ['Movies',''];
-  document.getElementById('home-sec-title').textContent = meta[0];
-  document.getElementById('home-sec-badge').textContent = meta[1];
+    const meta = PILL_META[key] || ['Movies',''];
+    document.getElementById('home-sec-title').textContent = meta[0];
+    document.getElementById('home-sec-badge').textContent = meta[1];
 
-  // "Trending movie" is the default — show the fixed home sections.
-  const isDefault = (gState.ep==='trending' && gState.mt==='movie' && !gState.lang);
-  document.getElementById('home-default-view').style.display = isDefault ? 'block' : 'none';
-  document.getElementById('home-filter-view').style.display  = isDefault ? 'none'  : 'block';
+    // "Trending movie" is the default — show the fixed home sections.
+    const isDefault = (gState.ep==='trending' && gState.mt==='movie' && !gState.lang);
+    document.getElementById('home-default-view').style.display = isDefault ? 'block' : 'none';
+    document.getElementById('home-filter-view').style.display  = isDefault ? 'none'  : 'block';
 
-  if(!isDefault) fetchFilterGrid();
+    if(!isDefault) fetchFilterGrid();
+  }, adKey);
 }
 
 // ── FILTERED VIEW (category pill) with pagination ──
@@ -1150,7 +1174,8 @@ function makeCard(item, type){
       <div class="mc-title">${title}</div>
       ${year?`<div class="mc-year">${year}</div>`:''}
     </div>`;
-  div.onclick=()=>openPlayer(id, type, item);
+  const adKey = getAdKey('movie', id);
+  div.onclick=()=>handleAdClick(()=>openPlayer(id, type, item), adKey);
   return div;
 }
 
@@ -1168,7 +1193,8 @@ function makeWideCard(item, type){
       ${rate?`<div class="wc-rate">⭐ ${rate}</div>`:''}
       <div class="play-ico"><div class="play-circle"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg></div></div>
     </div>`;
-  div.onclick=()=>openPlayer(id, type, item);
+  const adKey = getAdKey('movie', id);
+  div.onclick=()=>handleAdClick(()=>openPlayer(id, type, item), adKey);
   return div;
 }
 
@@ -1190,7 +1216,8 @@ function makeGridCard(item){
       <div class="gc-title">${title}</div>
       ${year?`<div class="gc-year">${year}${item.media_type==='tv'?' · TV':''}</div>`:''}
     </div>`;
-  div.onclick=()=>openPlayer(id, type, item);
+  const adKey = getAdKey('movie', id);
+  div.onclick=()=>handleAdClick(()=>openPlayer(id, type, item), adKey);
   return div;
 }
 
@@ -1368,9 +1395,12 @@ function buildSrcBtns(){
 }
 
 function switchSrc(i){
-  pState.src=i;
-  buildSrcBtns();
-  loadStream();
+  const adKey = getAdKey('server', i);
+  handleAdClick(() => {
+    pState.src=i;
+    buildSrcBtns();
+    loadStream();
+  }, adKey);
 }
 
 function buildSeasonSelect(){
@@ -1443,7 +1473,7 @@ function renderWatchlist(){
   }
   const items = keys.map(k=>watchlist[k]).sort((a,b)=>b.addedAt-a.addedAt);
   c.innerHTML=`<div class="wl-grid">${items.map(item=>`
-    <div class="wl-item" onclick="openPlayer(${item.id},'${item.type}',${JSON.stringify(item).replace(/"/g,'&quot;')})">
+    <div class="wl-item" onclick="(() => {const adKey = getAdKey('movie', ${item.id}); handleAdClick(()=>openPlayer(${item.id},'${item.type}',${JSON.stringify(item).replace(/"/g,'&quot;')}), adKey);})()">
       ${item.poster?`<img class="wl-thumb" src="${item.poster}" alt="${item.title}">`:`<div class="wl-thumb" style="background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--muted);">🎬</div>`}
       <div class="wl-info">
         <div class="wl-title">${item.title}</div>
