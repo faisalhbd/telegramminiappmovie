@@ -41,6 +41,11 @@ a{text-decoration:none;color:inherit;}
   display:flex;flex-direction:column;
   height:100vh;height:100dvh;
   overflow:hidden;
+  max-width:480px;          /* keep it a phone-sized app, centered on desktop */
+  margin:0 auto;
+  position:relative;
+  border-left:1px solid var(--border);
+  border-right:1px solid var(--border);
 }
 
 /* ── HEADER ── */
@@ -166,7 +171,9 @@ a{text-decoration:none;color:inherit;}
   font-size:10px;padding:2px 8px;border-radius:20px;
   background:rgba(232,184,75,0.12);
   color:var(--accent);border:1px solid rgba(232,184,75,0.3);
+  align-self:flex-start;
 }
+.section-sub{font-size:11px;color:var(--muted);margin-top:3px;font-weight:400;}
 .see-all{font-size:12px;color:var(--accent);cursor:pointer;}
 
 /* horizontal scroll row */
@@ -255,6 +262,35 @@ a{text-decoration:none;color:inherit;}
   grid-template-columns:repeat(3,1fr);
   gap:10px;padding:14px;
 }
+/* grids inside home sections: smaller responsive cards, no double padding */
+.section .movie-grid{
+  padding:0;
+  grid-template-columns:repeat(auto-fill,minmax(100px,1fr));
+  gap:10px;
+}
+/* keep posters compact on large/desktop screens too */
+@media (min-width:560px){
+  .movie-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));}
+}
+
+/* pagination */
+.pagination{
+  display:flex;align-items:center;justify-content:center;
+  gap:14px;padding:18px 14px 6px;
+}
+.page-btn{
+  background:var(--surface);color:var(--text);
+  border:1px solid var(--border);border-radius:8px;
+  padding:9px 16px;font-size:13px;font-weight:600;
+  transition:background .18s,opacity .18s,transform .12s;
+}
+.page-btn:active{transform:scale(0.94);}
+.page-btn:hover:not(:disabled){background:var(--surface2);border-color:var(--accent);}
+.page-btn:disabled{opacity:.35;cursor:not-allowed;}
+.page-info{
+  font-size:13px;color:var(--muted);font-weight:600;
+  min-width:90px;text-align:center;
+}
 .gc{
   cursor:pointer;border-radius:10px;overflow:hidden;
   background:var(--surface);border:1px solid var(--border);
@@ -272,6 +308,16 @@ a{text-decoration:none;color:inherit;}
 .gc-title{font-size:11px;font-weight:500;line-height:1.3;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 .gc-year{font-size:10px;color:var(--muted);margin-top:1px;}
+
+/* Top 10 rank number badge */
+.gc-rank{
+  position:absolute;bottom:6px;left:6px;z-index:2;
+  font-family:'Bebas Neue',sans-serif;
+  font-size:30px;line-height:1;color:var(--accent);
+  -webkit-text-stroke:1px rgba(8,10,15,0.9);
+  text-shadow:0 2px 6px rgba(0,0,0,0.7);
+  font-weight:700;
+}
 
 /* skeleton */
 .skel{
@@ -566,38 +612,103 @@ a{text-decoration:none;color:inherit;}
       <div class="pills-wrap" id="pills">
         <div class="pill active" onclick="selectPill(this,'trending','movie')">🔥 Trending</div>
         <div class="pill" onclick="selectPill(this,'popular','movie')">🎬 Hollywood</div>
-        <div class="pill" onclick="selectPill(this,'popular','tv')">📺 TV Shows</div>
-        <div class="pill" onclick="selectPill(this,'top_rated','movie')">⭐ Top Rated</div>
         <div class="pill" onclick="selectPill(this,'discover_hi','movie')">🎭 Bollywood</div>
         <div class="pill" onclick="selectPill(this,'discover_ko','movie')">🇰🇷 Korean</div>
+        <div class="pill" onclick="selectPill(this,'discover_tr','tv')">🇹🇷 Turkish Series</div>
+        <div class="pill" onclick="selectPill(this,'anime','tv')">🇯🇵 Anime</div>
         <div class="pill" onclick="selectPill(this,'discover_bn','movie')">🇧🇩 Bengali</div>
-        <div class="pill" onclick="selectPill(this,'upcoming','movie')">🆕 Coming Soon</div>
+        <div class="pill" onclick="selectPill(this,'hindi_dub','movie')">🎬 Hindi Dubbed</div>
+        <div class="pill" onclick="selectPill(this,'top_rated','movie')">⭐ Top Rated</div>
+        <div class="pill" onclick="selectPill(this,'popular','tv')">📺 TV Shows</div>
+        <div class="pill" onclick="selectPill(this,'upcoming','movie')">🆕 Upcoming</div>
       </div>
 
-      <!-- trending row -->
-      <div class="section">
-        <div class="section-hdr">
-          <span class="section-title" id="home-sec-title">Trending Now</span>
-          <span class="section-badge" id="home-sec-badge">LIVE</span>
+      <!-- ═══ FILTERED VIEW (when a category pill is selected) ═══ -->
+      <div id="home-filter-view" style="display:none;">
+        <div class="section">
+          <div class="section-hdr">
+            <span class="section-title" id="home-sec-title">Trending Now</span>
+            <span class="section-badge" id="home-sec-badge">LIVE</span>
+          </div>
+          <div class="movie-grid" id="home-filter-grid"></div>
+          <!-- pagination -->
+          <div class="pagination" id="home-pagination" style="display:none;">
+            <button class="page-btn" id="page-prev" onclick="changePage(-1)">‹ Prev</button>
+            <span class="page-info" id="page-info">Page 1</span>
+            <button class="page-btn" id="page-next" onclick="changePage(1)">Next ›</button>
+          </div>
         </div>
-        <div class="h-scroll" id="home-row"></div>
       </div>
 
-      <!-- continue watching (if any) -->
-      <div class="section" id="continue-section" style="display:none;">
-        <div class="section-hdr">
-          <span class="section-title">Continue Watching</span>
-        </div>
-        <div class="h-scroll" id="continue-row"></div>
-      </div>
+      <!-- ═══ DEFAULT HOME SECTIONS (fixed) ═══ -->
+      <div id="home-default-view">
 
-      <!-- recently added wide row -->
-      <div class="section" style="margin-bottom:8px;">
-        <div class="section-hdr">
-          <span class="section-title">Popular TV Shows</span>
-          <span class="section-badge">HOT</span>
+        <!-- continue watching (if any) -->
+        <div class="section" id="continue-section" style="display:none;">
+          <div class="section-hdr">
+            <span class="section-title">Continue Watching</span>
+          </div>
+          <div class="h-scroll" id="continue-row"></div>
         </div>
-        <div class="h-scroll" id="tv-row"></div>
+
+        <!-- Trending Now -->
+        <div class="section">
+          <div class="section-hdr">
+            <div>
+              <span class="section-title">Trending Now</span>
+              <div class="section-sub">What everyone is watching</div>
+            </div>
+            <span class="section-badge">LIVE</span>
+          </div>
+          <div class="movie-grid" id="grid-trending"></div>
+        </div>
+
+        <!-- Top Rated Films -->
+        <div class="section">
+          <div class="section-hdr">
+            <div>
+              <span class="section-title">Top Rated Films</span>
+              <div class="section-sub">Critically acclaimed masterpieces</div>
+            </div>
+            <span class="section-badge">⭐</span>
+          </div>
+          <div class="movie-grid" id="grid-toprated"></div>
+        </div>
+
+        <!-- Popular TV Shows -->
+        <div class="section">
+          <div class="section-hdr">
+            <div>
+              <span class="section-title">Popular TV Shows</span>
+            </div>
+            <span class="section-badge">HOT</span>
+          </div>
+          <div class="movie-grid" id="grid-tv"></div>
+        </div>
+
+        <!-- Top 10 Today -->
+        <div class="section">
+          <div class="section-hdr">
+            <div>
+              <span class="section-title">Top 10 Today</span>
+              <div class="section-sub">Most viewed in last 24 hours</div>
+            </div>
+            <span class="section-badge">🔥</span>
+          </div>
+          <div class="movie-grid top10-grid" id="grid-top10"></div>
+        </div>
+
+        <!-- New Releases -->
+        <div class="section" style="margin-bottom:8px;">
+          <div class="section-hdr">
+            <div>
+              <span class="section-title">New Releases</span>
+            </div>
+            <span class="section-badge">🆕</span>
+          </div>
+          <div class="movie-grid" id="grid-new"></div>
+        </div>
+
       </div>
     </div>
 
@@ -836,7 +947,7 @@ function setGreeting(){
 }
 
 // ── STATE ──
-let gState = {ep:'trending', mt:'movie', lang:null, page:1};
+let gState = {ep:'trending', mt:'movie', lang:null, page:1, totalPages:1};
 let pState = {type:'movie', id:null, title:'', poster:'', overview:'', s:1, e:1, src:0, seasons:1, year:'', rating:''};
 let watchlist = JSON.parse(localStorage.getItem('mcbd_wl') || '{}');
 let searchPage = 1, searchQuery = '', searchTimer = null;
@@ -868,59 +979,131 @@ function showPage(name){
 
 // ── HOME FETCH ──
 const PILL_META = {
-  'trending_movie':  ['Trending Now','LIVE'],
-  'popular_movie':   ['Hollywood','HOT'],
-  'popular_tv':      ['Popular TV Shows','📺'],
-  'top_rated_movie': ['Top Rated','⭐'],
+  'trending_movie':   ['Trending Now','LIVE'],
+  'popular_movie':    ['Hollywood','🎬'],
+  'popular_tv':       ['TV Shows','📺'],
+  'top_rated_movie':  ['Top Rated','⭐'],
   'discover_hi_movie':['Bollywood','🎭'],
   'discover_ko_movie':['Korean','🇰🇷'],
+  'discover_tr_tv':   ['Turkish Series','🇹🇷'],
+  'anime_tv':         ['Anime','🇯🇵'],
   'discover_bn_movie':['Bengali','🇧🇩'],
-  'upcoming_movie':  ['Coming Soon','🆕'],
+  'hindi_dub_movie':  ['Hindi Dubbed','🎬'],
+  'upcoming_movie':   ['Upcoming','🆕'],
 };
 
 function selectPill(el, ep, mt){
   document.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
   el.classList.add('active');
-  gState = {ep, mt, lang:null, page:1};
+  const key = `${ep}_${mt}`;
+  gState = {ep, mt, lang:null, page:1, totalPages:1};
   // special lang pills
   if(ep==='discover_hi'){gState.ep='discover';gState.lang='hi';}
   if(ep==='discover_ko'){gState.ep='discover';gState.lang='ko';}
   if(ep==='discover_bn'){gState.ep='discover';gState.lang='bn';}
-  const key = `${ep}_${mt}`;
+  if(ep==='discover_tr'){gState.ep='discover';gState.lang='tr';}
+  // 'anime' and 'hindi_dub' handled directly inside fetchItems
+
   const meta = PILL_META[key] || ['Movies',''];
   document.getElementById('home-sec-title').textContent = meta[0];
   document.getElementById('home-sec-badge').textContent = meta[1];
-  fetchHomeRow();
+
+  // "Trending movie" is the default — show the fixed home sections.
+  const isDefault = (gState.ep==='trending' && gState.mt==='movie' && !gState.lang);
+  document.getElementById('home-default-view').style.display = isDefault ? 'block' : 'none';
+  document.getElementById('home-filter-view').style.display  = isDefault ? 'none'  : 'block';
+
+  if(!isDefault) fetchFilterGrid();
 }
 
-async function fetchHomeRow(){
-  const row = document.getElementById('home-row');
-  row.innerHTML = Array(8).fill(0).map(()=>`<div class="mc skel"><div class="mc-pw"></div><div class="mc-info"></div></div>`).join('');
-  const items = await fetchItems(gState.ep, gState.mt, gState.lang, 1);
-  row.innerHTML = '';
-  items.slice(0,12).forEach(item=>{
-    row.appendChild(makeCard(item, gState.mt==='tv'?'tv':'movie'));
+// ── FILTERED VIEW (category pill) with pagination ──
+async function fetchFilterGrid(){
+  const grid = document.getElementById('home-filter-grid');
+  grid.innerHTML = skelGrid(12);
+  // scroll grid into view on page change
+  document.getElementById('home-filter-view').scrollIntoView({behavior:'smooth',block:'start'});
+  const data  = await fetchItems(gState.ep, gState.mt, gState.lang, gState.page);
+  const items = data.results || [];
+  gState.totalPages = data.total_pages || 1;
+  const type  = gState.mt==='tv' ? 'tv' : 'movie';
+  grid.innerHTML = '';
+  // 20 items per page
+  items.slice(0,20).forEach(item=>{
+    item.media_type = item.media_type || type;
+    grid.appendChild(makeGridCard(item));
+  });
+  if(!items.length){
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:40px 10px;">No titles found 🔍</div>`;
+  }
+  renderPagination();
+}
+
+function renderPagination(){
+  const pag = document.getElementById('home-pagination');
+  if(!pag) return;
+  pag.style.display = 'flex';
+  document.getElementById('page-info').textContent = `Page ${gState.page} / ${gState.totalPages}`;
+  document.getElementById('page-prev').disabled = gState.page <= 1;
+  document.getElementById('page-next').disabled = gState.page >= gState.totalPages;
+}
+
+function changePage(dir){
+  const next = gState.page + dir;
+  if(next < 1 || next > gState.totalPages) return;
+  gState.page = next;
+  fetchFilterGrid();
+}
+
+// ── FIXED HOME SECTIONS ──
+function skelGrid(n){
+  return Array(n).fill(0).map(()=>`<div class="gc skel"><div class="gc-pw" style="aspect-ratio:2/3;"></div><div style="height:40px;margin:6px;border-radius:4px;" class="skel"></div></div>`).join('');
+}
+
+async function fillGrid(gridId, ep, mt, lang, limit, rank){
+  const grid = document.getElementById(gridId);
+  if(!grid) return;
+  grid.innerHTML = skelGrid(limit>9?9:limit);
+  const data = await fetchItems(ep, mt, lang, 1);
+  const items = data.results || [];
+  const type  = mt==='tv' ? 'tv' : 'movie';
+  grid.innerHTML = '';
+  items.slice(0, limit).forEach((item, i)=>{
+    item.media_type = item.media_type || type;
+    const card = makeGridCard(item);
+    if(rank){
+      const pw = card.querySelector('.gc-pw');
+      if(pw){ const r=document.createElement('div'); r.className='gc-rank'; r.textContent=(i+1); pw.appendChild(r); }
+    }
+    grid.appendChild(card);
   });
 }
 
-async function fetchTVRow(){
-  const row = document.getElementById('tv-row');
-  row.innerHTML = Array(6).fill(0).map(()=>`<div class="wc skel" style="min-height:140px;"></div>`).join('');
-  const items = await fetchItems('popular','tv',null,1);
-  row.innerHTML = '';
-  items.slice(0,8).forEach(item=>{
-    row.appendChild(makeWideCard(item,'tv'));
-  });
+function loadHomeSections(){
+  fillGrid('grid-trending','trending','movie',null,9);
+  fillGrid('grid-toprated','top_rated','movie',null,9);
+  fillGrid('grid-tv','popular','tv',null,9);
+  fillGrid('grid-top10','trending','all',null,10,true);
+  fillGrid('grid-new','upcoming','movie',null,9);
 }
 
 // ── API ──
+// Returns { results, total_pages }
 async function fetchItems(ep, mt, lang, page){
   let url;
   const base = `${API}`;
+  page = page || 1;
   if(ep==='trending') url=`${base}/trending/${mt}/week?api_key=${TMDB_KEY}&page=${page}`;
   else if(ep==='popular') url=`${base}/${mt}/popular?api_key=${TMDB_KEY}&page=${page}`;
   else if(ep==='top_rated') url=`${base}/${mt}/top_rated?api_key=${TMDB_KEY}&page=${page}`;
   else if(ep==='upcoming') url=`${base}/movie/upcoming?api_key=${TMDB_KEY}&page=${page}`;
+  else if(ep==='anime'){
+    // Japanese animation TV shows
+    url=`${base}/discover/tv?api_key=${TMDB_KEY}&sort_by=popularity.desc&with_original_language=ja&with_genres=16&page=${page}`;
+  }
+  else if(ep==='hindi_dub'){
+    // Popular movies available in Hindi (dubbed) — Hindi audio language
+    url=`${base}/discover/movie?api_key=${TMDB_KEY}&sort_by=popularity.desc&with_original_language=en&with_watch_providers=&page=${page}&language=hi-IN`;
+  }
   else if(ep==='discover'){
     url=`${base}/discover/${mt}?api_key=${TMDB_KEY}&sort_by=popularity.desc&page=${page}`;
     if(lang) url+=`&with_original_language=${lang}`;
@@ -928,8 +1111,8 @@ async function fetchItems(ep, mt, lang, page){
   else url=`${base}/trending/movie/week?api_key=${TMDB_KEY}&page=${page}`;
   try{
     const d = await (await fetch(url)).json();
-    return d.results || [];
-  } catch(e){ return []; }
+    return { results: d.results || [], total_pages: Math.min(d.total_pages || 1, 500) };
+  } catch(e){ return { results:[], total_pages:1 }; }
 }
 
 async function searchTMDB(q, page=1){
@@ -1018,9 +1201,9 @@ async function loadBrowseGrid(){
   const ph   = document.getElementById('search-placeholder');
   ph.style.display='none';
   grid.innerHTML = Array(12).fill(0).map(()=>`<div class="gc skel"><div class="gc-pw" style="aspect-ratio:2/3;"></div><div style="height:40px;margin:6px;border-radius:4px;" class="skel"></div></div>`).join('');
-  const items = await fetchItems('trending','movie',null,1);
-  const tvs   = await fetchItems('popular','tv',null,1);
-  const all   = [...items,...tvs.slice(0,6)];
+  const d1 = await fetchItems('trending','movie',null,1);
+  const d2 = await fetchItems('popular','tv',null,1);
+  const all = [...(d1.results||[]), ...(d2.results||[]).slice(0,6)];
   grid.innerHTML='';
   all.forEach(item=>{
     if(!item.media_type) item.media_type = 'movie';
@@ -1039,9 +1222,9 @@ async function loadMoreSearch(){
     // load more trending
     const page = parseInt(document.getElementById('search-grid').dataset.page||'1') + 1;
     document.getElementById('search-grid').dataset.page = page;
-    const items = await fetchItems('trending','all',null,page);
+    const data = await fetchItems('trending','all',null,page);
     const grid  = document.getElementById('search-grid');
-    items.forEach(item=>{
+    (data.results||[]).forEach(item=>{
       if(!item.media_type) item.media_type='movie';
       grid.appendChild(makeGridCard(item));
     });
@@ -1361,8 +1544,7 @@ function toast(msg){
 initUserUI();
 setGreeting();
 renderContinue();
-fetchHomeRow();
-fetchTVRow();
+loadHomeSections();
 updateProfileStats();
 
 // Check for deep link (?id=&type=)
