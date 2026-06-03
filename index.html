@@ -1101,8 +1101,10 @@ async function fetchItems(ep, mt, lang, page){
     url=`${base}/discover/tv?api_key=${TMDB_KEY}&sort_by=popularity.desc&with_original_language=ja&with_genres=16&page=${page}`;
   }
   else if(ep==='hindi_dub'){
-    // Popular movies available in Hindi (dubbed) — Hindi audio language
-    url=`${base}/discover/movie?api_key=${TMDB_KEY}&sort_by=popularity.desc&with_original_language=en&with_watch_providers=&page=${page}&language=hi-IN`;
+    // Popular movies dubbed in Hindi — focus on recent releases (more likely to have Hindi dubs)
+    const currentYear = new Date().getFullYear();
+    const yearFilter = `${currentYear-5}-${currentYear}`;
+    url=`${base}/discover/movie?api_key=${TMDB_KEY}&sort_by=popularity.desc&primary_release_date.gte=${currentYear-5}-01-01&page=${page}`;
   }
   else if(ep==='discover'){
     url=`${base}/discover/${mt}?api_key=${TMDB_KEY}&sort_by=popularity.desc&page=${page}`;
@@ -1360,8 +1362,9 @@ function loadStream(){
 
 function buildSrcBtns(){
   const row  = document.getElementById('src-row');
-  const srcs = ['VidSrc 1','VidSrc 2','2Embed','MultiEmbed'];
-  row.innerHTML = srcs.map((s,i)=>`<button class="src-btn ${i===pState.src?'active':''}" onclick="switchSrc(${i})">${s}</button>`).join('');
+  const srcs = ['Server 1','Server 2','Server 3','Server 4'];
+  const note = '<div style="font-size:11px;color:var(--muted);padding:8px 14px 0;line-height:1.4;">💡 <strong>If Server 1 is not working</strong>, please try Server 2, 3, or 4</div>';
+  row.innerHTML = srcs.map((s,i)=>`<button class="src-btn ${i===pState.src?'active':''}" onclick="switchSrc(${i})">${s}</button>`).join('') + note;
 }
 
 function switchSrc(i){
